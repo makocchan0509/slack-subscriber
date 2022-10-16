@@ -1,0 +1,16 @@
+indexes:
+  - kind: Slack
+    ancestor: no
+    properties:
+      - name: Type
+      - name: User
+  - kind: Slack
+    ancestor: no
+    properties:
+      - name: EventTs
+      - name: User
+  - kind: Slack
+    ancestor: no
+    properties:
+      - name: Channel
+      - name: User

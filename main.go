@@ -28,6 +28,74 @@ type dataStoreClient struct {
 	taskKey *datastore.Key
 }
 
+type SlackUrlVerify struct {
+	Token     string `json:"token"`
+	Challenge string `json:"challenge"`
+	Type      string `json:"type"`
+}
+
+type T struct {
+	Type     string `json:"type"`
+	User     string `json:"user"`
+	Reaction string `json:"reaction"`
+	Item     struct {
+		Type    string `json:"type"`
+		Channel string `json:"channel"`
+		Ts      string `json:"ts"`
+	} `json:"item"`
+	ItemUser string `json:"item_user"`
+	EventTs  string `json:"event_ts"`
+}
+
+type SlackEvent struct {
+	ClientMsgId string `json:"client_msg_id"`
+	Type        string `json:"type"`
+	Text        string `json:"text"`
+	User        string `json:"user"`
+	Ts          string `json:"ts"`
+	Team        string `json:"team"`
+	Blocks      []struct {
+		Type     string `json:"type"`
+		BlockId  string `json:"block_id"`
+		Elements []struct {
+			Type     string `json:"type"`
+			Elements []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"elements"`
+		} `json:"elements"`
+	} `json:"blocks"`
+	Channel     string `json:"channel"`
+	EventTs     string `json:"event_ts"`
+	ChannelType string `json:"channel_type"`
+	Reaction    string `json:"reaction"`
+	Item        struct {
+		Type    string `json:"type"`
+		Channel string `json:"channel"`
+		Ts      string `json:"ts"`
+	} `json:"item"`
+	ItemUser string `json:"item_user"`
+}
+
+type SlackCall struct {
+	Token          string `json:"token"`
+	TeamId         string `json:"team_id"`
+	ApiAppId       string `json:"api_app_id"`
+	Event          SlackEvent
+	Type           string `json:"type"`
+	EventId        string `json:"event_id"`
+	EventTime      int    `json:"event_time"`
+	Authorizations []struct {
+		EnterpriseId        interface{} `json:"enterprise_id"`
+		TeamId              string      `json:"team_id"`
+		UserId              string      `json:"user_id"`
+		IsBot               bool        `json:"is_bot"`
+		IsEnterpriseInstall bool        `json:"is_enterprise_install"`
+	} `json:"authorizations"`
+	IsExtSharedChannel bool   `json:"is_ext_shared_channel"`
+	EventContext       string `json:"event_context"`
+}
+
 func newDataStoreClient(ctx context.Context, project string) (dataStoreClient, error) {
 	cli, err := datastore.NewClient(ctx, project)
 	if err != nil {
@@ -55,11 +123,6 @@ func (dc *dataStoreClient) close() {
 	dc.client.Close()
 }
 
-type SlackEvent struct {
-	Message string
-	User    string
-}
-
 func slackNotification(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "POST" {
@@ -84,20 +147,20 @@ func slackNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var jsonBody map[string]interface{}
-	err = json.Unmarshal(body[:length], &jsonBody)
+	var urlVerify SlackUrlVerify
+	err = json.Unmarshal(body, &urlVerify)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	t := urlVerify.Type
 
-	if v, ok := jsonBody["type"]; ok && v.(string) == "url_verification" {
+	if t == "url_verification" {
 		log.Println("received url verification request")
-		log.Printf("%v\n", jsonBody)
+		log.Printf("%v\n", urlVerify)
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(jsonBody["challenge"].(string)))
-
+		w.Write([]byte(urlVerify.Challenge))
 		return
 	}
 
@@ -116,12 +179,12 @@ func slackNotification(w http.ResponseWriter, r *http.Request) {
 	uu := u.String()
 	cli.generateKey("slack", uu)
 
-	entity := SlackEvent{
-		Message: "hello",
-		User:    "Gopher",
+	var event SlackCall
+	if err := json.Unmarshal(body, &event); err != nil {
+		log.Printf("json unmarhal error: %v", err)
 	}
-	log.Printf("%v\n", entity)
-	if err := cli.put(ctx, entity); err != nil {
+
+	if err := cli.put(ctx, event.Event); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
