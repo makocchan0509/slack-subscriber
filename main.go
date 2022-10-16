@@ -106,7 +106,9 @@ func slackNotification(w http.ResponseWriter, r *http.Request) {
 	project := os.Getenv("PROJECT_ID")
 	cli, err := newDataStoreClient(ctx, project)
 	if err != nil {
-		log.Fatal("Failed initialize app.")
+		log.Println("Failed initialize app.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	defer cli.close()
 
@@ -118,6 +120,7 @@ func slackNotification(w http.ResponseWriter, r *http.Request) {
 		Message: "hello",
 		User:    "Gopher",
 	}
+	log.Printf("%v\n", entity)
 	if err := cli.put(ctx, entity); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

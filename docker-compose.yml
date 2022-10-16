@@ -1,0 +1,10 @@
+version: '3'
+services:
+  slack-event:
+    image: asia-northeast1-docker.pkg.dev/host-shared-mc-001/events/slack-subscriber:0.4
+    ports:
+      - "8080:8080"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/tmp/host-shared-mc-001-01e1e850deee.json
+    volumes:
+      - ~/host-shared-mc-001-01e1e850deee.json:/tmp
